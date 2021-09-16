@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'home.dart';
 import 'settings.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(ProviderScope(child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -39,16 +40,7 @@ class _AppState extends State<App> {
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 500),
-          child: (() {
-            switch (selectedTab) {
-              case 0:
-                return Home();
-              case 1:
-                return Settings();
-              default:
-                return Container();
-            }
-          })(),
+          child: selectedTab == 0 ? Home() : Settings(),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
