@@ -6,6 +6,7 @@ class PrinterModel extends StateNotifier<PrinterState> {
           macAddress: Hive.box<String?>('settingsBox').get('printerAddress'),
         )) {
     refresh();
+    check();
     PrintBluetoothThermal.connectionStatus.asStream().listen((event) async {
       final local = Hive.box<String?>('settingsBox').get('printerAddress');
       print("dari listener, status $event");
@@ -14,10 +15,27 @@ class PrinterModel extends StateNotifier<PrinterState> {
         print("dari listener, haslocal address");
         await connect(local!);
       }
+
+      if (event && state.isAvailable && local != null) {
+        state = state.connect(local);
+      }
+    });
+
+    PrintBluetoothThermal.bluetoothEnabled.asStream().listen((event) async {
+      final local = Hive.box<String?>('settingsBox').get('printerAddress');
+      if (event && local != null) {
+        await connect(local);
+      }
     });
   }
 
   final PrinterTemplate template;
+
+  Future<void> check() async {
+    final status = await PrintBluetoothThermal.connectionStatus;
+    final local = Hive.box<String?>('settingsBox').get('printerAddress');
+    if (status && local != null) state = state.connect(local);
+  }
 
   Future<void> initPlatformState() async {
     if (!mounted) return;
