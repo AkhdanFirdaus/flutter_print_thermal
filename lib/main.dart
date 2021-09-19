@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:print_app/printer/printer_page.dart';
 
 import 'home.dart';
 import 'settings.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox<String?>("settingsBox");
+
   runApp(ProviderScope(child: const MyApp()));
 }
 
@@ -18,7 +25,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const App(),
+      routes: {
+        '/': (context) => App(),
+        '/printer-settings': (context) => PrinterPage(),
+      },
     );
   }
 }

@@ -5,14 +5,16 @@ class PrinterState extends Equatable {
   final String? macAddress;
   final PrinterEvent status;
   final bool isLoading;
-  final String? failedMessage;
+  final bool isConnecting;
+  final String? message;
 
   PrinterState({
     this.pairedDevices = const [],
     this.macAddress,
-    this.status = PrinterEvent.idle,
+    this.status = PrinterEvent.notAvailable,
     this.isLoading = false,
-    this.failedMessage,
+    this.isConnecting = false,
+    this.message,
   });
 
   PrinterState copyWith({
@@ -20,44 +22,65 @@ class PrinterState extends Equatable {
     PrinterEvent? status,
     String? macAddress,
     bool? isLoading,
-    String? failedMessage,
+    bool? isConnecting,
+    String? message,
   }) {
     return PrinterState(
       pairedDevices: pairedDevices ?? this.pairedDevices,
       status: status ?? this.status,
       macAddress: macAddress ?? this.macAddress,
       isLoading: isLoading ?? this.isLoading,
-      failedMessage: failedMessage ?? this.failedMessage,
+      message: message ?? this.message,
+      isConnecting: isConnecting ?? this.isConnecting,
     );
   }
 
   PrinterState startLoading() => copyWith(isLoading: true);
   PrinterState stopLoading() => copyWith(isLoading: false);
-  PrinterState failed(String message) => copyWith(failedMessage: message);
+  PrinterState startConnecting() => copyWith(isConnecting: true);
+  PrinterState stopConnecting() => copyWith(isConnecting: false);
 
-  PrinterState connect(String macAddress) => copyWith(
-        status: PrinterEvent.connected,
-        macAddress: macAddress,
+  PrinterState failed(String message) => copyWith(
+        status: PrinterEvent.notAvailable,
+        message: message,
       );
 
-  PrinterState disconnect() => copyWith(
-        status: PrinterEvent.disconnect,
-        macAddress: null,
+  PrinterState available(String message, List<BluetoothInfo> devices) =>
+      copyWith(
+        status: isConnected ? PrinterEvent.connected : PrinterEvent.available,
+        message: message,
+        pairedDevices: devices,
       );
 
-  PrinterState available() => copyWith(status: PrinterEvent.available);
-  PrinterState notAvailable() => copyWith(status: PrinterEvent.notAvailable);
+  PrinterState connect(String macAddress) {
+    Hive.box<String?>('settingsBox').put('printerAddress', macAddress);
+    return copyWith(
+      status: PrinterEvent.connected,
+      macAddress: macAddress,
+    );
+  }
 
-  PrinterState reset() => copyWith(
-        status: PrinterEvent.idle,
-        macAddress: null,
-      );
+  PrinterState disconnect() {
+    Hive.box<String?>('settingsBox').delete('printerAddress');
+    return copyWith(
+      status: PrinterEvent.available,
+      macAddress: null,
+    );
+  }
 
-  bool get isFailed => failedMessage != null;
-  bool get isConnected => status == PrinterEvent.connected;
-  bool get readyToConnect => status == PrinterEvent.available;
+  bool get isConnected =>
+      status == PrinterEvent.connected && macAddress != null;
+  bool get hasLocalAddress => macAddress != null;
+  bool get isAvailable =>
+      status == PrinterEvent.available &&
+      message != null &&
+      pairedDevices.isNotEmpty;
+  bool get isNotAvailable =>
+      status == PrinterEvent.notAvailable &&
+      message != null &&
+      pairedDevices.isEmpty;
 
   @override
   List<Object?> get props =>
-      [pairedDevices, macAddress, status, isLoading, failedMessage];
+      [pairedDevices, macAddress, status, isLoading, isConnecting, message];
 }
